@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package service;
+
+option go_package = ".;grpc_demo";
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloReply {
+  string message = 1;
+}
+
+message Request{
+  int32 cyber_id=1;
+}
+message Response{
+  int32 no=1;
+  string msg=2;
+}
+service CyberManager{
+  rpc SayHello (HelloRequest) returns (HelloReply) {}
+  rpc EasyMode(Request)returns(Response){};//gRPC简单模式
+  rpc ClientStream(stream Request)returns(Response){};//客户端流模式（客户端发送stream）
+  rpc ServerStream(Request)returns(stream Response){};//服务端流模式（从服务端返回stream）
+  rpc BidirectionalStream(stream Request)returns(stream Response){};//双向流模式
+
+  rpc RemoteControl(Request)returns(Response){};//gRPC简单模式
+  rpc CyberControl(Request)returns(stream Response){};//服务端流模式（从服务端返回stream）
+}
