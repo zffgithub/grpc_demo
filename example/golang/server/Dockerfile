@@ -1,18 +1,20 @@
 #docker 17.05+
 #sudo docker build -t  grpc-demo-golang:1.0 .
-#sudo docker run --name grpc-demo-golang -p 8080:50051  --restart always  -d   grpc-demo-golang:1.0 
-FROM 1.15.15-alpine3.14 as golang
+#sudo docker run --name grpc-demo-golang -p 8081:50051  --restart always  -d   grpc-demo-golang:1.0 
+FROM golang:alpine3.15 as golang
 RUN apk update && \
     apk add  bash ca-certificates git && \
     rm -rf /var/cache/apk/*   /tmp/* 
-ADD ./example/golang/server /data/src/
+ADD . /data/src/
 WORKDIR /data/src/
 ENV GO111MODULE on
+ENV GOPROXY https://goproxy.cn
 RUN go mod download
-RUN go build server.go queue.go
+RUN cd ./example/golang/server
+RUN go build ./example/golang/server/server.go ./example/golang/server/queue.go
 
 
-FROM alpine:3.14
+FROM alpine:3.15
 RUN TERM=linux && export TERM
 USER root
 RUN apk update && \
