@@ -1,78 +1,189 @@
 package main
 
+// https://github.com/asong2020/Golang_Dream/tree/master/code_demo/queue
+
 import (
-	"container/list"
 	"errors"
-	"fmt"
 	"sync"
+	"time"
 )
 
-type Queue struct {
-	topic string
-	list  *list.List
-	mutex sync.Mutex
+type Broker interface {
+	publish(topic string, msg interface{}) error
+	subscribe(topic string) (<-chan interface{}, error)
+	unsubscribe(topic string, sub <-chan interface{}) error
+	close()
+	broadcast(msg interface{}, subscribers []chan interface{})
+	setConditions(capacity int)
 }
 
-var multi_queue map[string]*Queue
+type BrokerImpl struct {
+	exit     chan bool
+	capacity int
 
-func init() {
-	multi_queue = make(map[string]*Queue)
+	topics       map[string][]chan interface{} // key： topic  value ： queue
+	sync.RWMutex                               // 同步锁
 }
 
-func GetQueue(topic string) *Queue {
-	if _, ok := multi_queue[topic]; ok {
-		fmt.Println("Exist Queue Len: ", multi_queue[topic].Len())
-		return multi_queue[topic]
-	} else {
-		multi_queue[topic] = &Queue{
-			topic: topic,
-			list:  list.New(),
-		}
-		fmt.Println("Make New Queue Len: ", multi_queue[topic].Len())
-		return multi_queue[topic]
+func NewBroker() *BrokerImpl {
+	return &BrokerImpl{
+		exit:   make(chan bool),
+		topics: make(map[string][]chan interface{}),
 	}
 }
 
-func (queue *Queue) Push(data interface{}) {
-	if data == nil {
+func (b *BrokerImpl) setConditions(capacity int) {
+	b.capacity = capacity
+}
+
+func (b *BrokerImpl) close() {
+	select {
+	case <-b.exit:
 		return
+	default:
+		close(b.exit)
+		b.Lock()
+		b.topics = make(map[string][]chan interface{})
+		b.Unlock()
 	}
-	queue.mutex.Lock()
-	defer queue.mutex.Unlock()
-	queue.list.PushBack(data)
-	queue.Show()
+	return
 }
 
-func (queue *Queue) Pop() (interface{}, error) {
-	queue.mutex.Lock()
-	defer queue.mutex.Unlock()
-	if element := queue.list.Front(); element != nil {
-		queue.list.Remove(element)
-		return element.Value, nil
-	} else {
-		fmt.Println("Pop Error:")
+func (b *BrokerImpl) publish(topic string, pub interface{}) error {
+	select {
+	case <-b.exit:
+		return errors.New("broker closed")
+	default:
 	}
-	return nil, errors.New("pop failed")
+
+	b.RLock()
+	subscribers, ok := b.topics[topic]
+	b.RUnlock()
+	if !ok {
+		return nil
+	}
+
+	b.broadcast(pub, subscribers)
+	return nil
 }
 
-func (queue *Queue) Clear() {
-	queue.mutex.Lock()
-	defer queue.mutex.Unlock()
-	for element := queue.list.Front(); element != nil; {
-		elementNext := element.Next()
-		queue.list.Remove(element)
-		element = elementNext
+func (b *BrokerImpl) broadcast(msg interface{}, subscribers []chan interface{}) {
+	count := len(subscribers)
+	concurrency := 1
+
+	switch {
+	case count > 1000:
+		concurrency = 3
+	case count > 100:
+		concurrency = 2
+	default:
+		concurrency = 1
+	}
+
+	pub := func(start int) {
+		//采用Timer 而不是使用time.After 原因：time.After会产生内存泄漏 在计时器触发之前，垃圾回收器不会回收Timer
+		idleDuration := 5 * time.Millisecond
+		idleTimeout := time.NewTimer(idleDuration)
+		defer idleTimeout.Stop()
+		for j := start; j < count; j += concurrency {
+			if !idleTimeout.Stop() {
+				select {
+				case <-idleTimeout.C:
+				default:
+				}
+			}
+			idleTimeout.Reset(idleDuration)
+			select {
+			case subscribers[j] <- msg:
+			case <-idleTimeout.C:
+			case <-b.exit:
+				return
+			}
+		}
+	}
+	for i := 0; i < concurrency; i++ {
+		go pub(i)
 	}
 }
 
-func (queue *Queue) Len() int {
-	// fmt.Println(time.Now())
-	queue.Show()
-	return queue.list.Len()
+func (b *BrokerImpl) subscribe(topic string) (<-chan interface{}, error) {
+	select {
+	case <-b.exit:
+		return nil, errors.New("broker closed")
+	default:
+	}
+
+	ch := make(chan interface{}, b.capacity)
+	b.Lock()
+	b.topics[topic] = append(b.topics[topic], ch)
+	b.Unlock()
+	return ch, nil
 }
 
-func (queue *Queue) Show() {
-	for item := queue.list.Front(); item != nil; item = item.Next() {
-		fmt.Println("show value:", item.Value)
+func (b *BrokerImpl) unsubscribe(topic string, sub <-chan interface{}) error {
+	select {
+	case <-b.exit:
+		return errors.New("broker closed")
+	default:
 	}
+
+	b.RLock()
+	subscribers, ok := b.topics[topic]
+	b.RUnlock()
+
+	if !ok {
+		return nil
+	}
+	// delete subscriber
+	b.Lock()
+	var newSubs []chan interface{}
+	for _, subscriber := range subscribers {
+		if subscriber == sub {
+			continue
+		}
+		newSubs = append(newSubs, subscriber)
+	}
+
+	b.topics[topic] = newSubs
+	b.Unlock()
+	return nil
+}
+
+type Client struct {
+	bro *BrokerImpl
+}
+
+func NewClient() *Client {
+	return &Client{
+		bro: NewBroker(),
+	}
+}
+
+func (c *Client) SetConditions(capacity int) {
+	c.bro.setConditions(capacity)
+}
+
+func (c *Client) Publish(topic string, msg interface{}) error {
+	return c.bro.publish(topic, msg)
+}
+
+func (c *Client) Subscribe(topic string) (<-chan interface{}, error) {
+	return c.bro.subscribe(topic)
+}
+
+func (c *Client) Unsubscribe(topic string, sub <-chan interface{}) error {
+	return c.bro.unsubscribe(topic, sub)
+}
+
+func (c *Client) Close() {
+	c.bro.close()
+}
+
+func (c *Client) GetPayLoad(sub <-chan interface{}) interface{} {
+	for val := range sub {
+		if val != nil {
+			return val
+		}
+	}
+	return nil
 }

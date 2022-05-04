@@ -36,14 +36,14 @@ func CyberControlFunc(client service.CyberManagerClient) {
 			fmt.Println("Error in ServerStreamFunc:", err2)
 			return
 		}
-		fmt.Println("Recieve one data:", v)
+		fmt.Println("CyberControlFunc Recieve one data:", v)
 	}
 }
 
 func main() {
 
 	kacp := keepalive.ClientParameters{
-		Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
+		Time:                30 * time.Second, // send pings every 10 seconds if there is no activity
 		Timeout:             time.Second,      // wait 1 second for ping ack before considering the connection dead
 		PermitWithoutStream: true,             // send pings even without active streams
 	}

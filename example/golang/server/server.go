@@ -95,8 +95,12 @@ func (s *Server) BidirectionalStream(stream service.CyberManager_BidirectionalSt
 	// return nil
 }
 
+var q *Client
+
 func init() {
 	fmt.Println("Init")
+	q = NewClient()
+	q.SetConditions(100)
 }
 
 //简单模式
@@ -104,34 +108,48 @@ func (s *Server) RemoteControl(ctx context.Context, in *service.Request) (*servi
 	fmt.Println("RemoteControl================简单模式================")
 	re := &service.Response{No: in.CyberId, Msg: "Receive one data"}
 	topic := string(in.CyberId)
-	q := GetQueue(topic)
-	q.Push(fmt.Sprintf("msg:%s", time.Now().Format("2020/10/13 11:16:13")))
+	msg := fmt.Sprintf("RemoteControl Server send msg:%s", time.Now().Format("2006/01/02 15:04:05"))
+	if err := q.Publish(topic, msg); err != nil {
+		fmt.Println(err)
+	}
 	return re, nil
 }
 
 //服务端流模式
 func (s *Server) CyberControl(in *service.Request, stream service.CyberManager_CyberControlServer) error {
 	fmt.Println("CyberControl###############服务端流模式###############")
-	fmt.Println("Receive client data:", in)
+	fmt.Println("Receive client request:", in)
 	topic := string(in.CyberId)
-	q := GetQueue(topic)
+	ch, err := q.Subscribe(topic)
+	if err != nil {
+		fmt.Println(err)
+	}
 	for {
-		if q.Len() == 0 {
-			continue
-		}
-		fmt.Println("Queue len: ", q.Len())
-		data, err := q.Pop()
-		if err != nil {
-			fmt.Println("Queue pop data error:", err)
-			continue
-		}
-		p := &service.Response{No: in.CyberId, Msg: fmt.Sprintf("Server push data:%v", data)}
+		msg := q.GetPayLoad(ch)
+		fmt.Println("CyberControl Receive queue data:", msg)
+		p := &service.Response{No: in.CyberId, Msg: fmt.Sprintf("CyberControl Server push data:%v", msg)}
 		send_err := stream.Send(p)
 		if send_err != nil {
 			fmt.Println("Send msg error:", send_err)
 		}
-		fmt.Println("###############")
 	}
+	// var wg sync.WaitGroup
+	// wg.Add(1)
+	// go func() {
+	// 	msg := q.GetPayLoad(ch)
+	// 	p := &service.Response{No: in.CyberId, Msg: fmt.Sprintf("Server push data:%v", msg)}
+	// 	send_err := stream.Send(p)
+	// 	if send_err != nil {
+	// 		fmt.Println("Send msg error:", send_err)
+	// 	}
+	// 	fmt.Println("###############")
+	// 	if err := q.Unsubscribe(topic, ch); err != nil {
+	// 		fmt.Println(err)
+	// 	}
+	// 	wg.Done()
+	// }()
+	// wg.Wait()
+	// return nil
 }
 
 func main() {
@@ -141,16 +159,16 @@ func main() {
 	}
 
 	kaep := keepalive.EnforcementPolicy{
-		MinTime:             5 * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
-		PermitWithoutStream: true,            // Allow pings even when there are no active streams
+		MinTime:             60 * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
+		PermitWithoutStream: true,             // Allow pings even when there are no active streams
 	}
 
 	kasp := keepalive.ServerParameters{
-		MaxConnectionIdle:     15 * time.Second, // If a client is idle for 15 seconds, send a GOAWAY
-		MaxConnectionAge:      30 * time.Second, // If any connection is alive for more than 30 seconds, send a GOAWAY
-		MaxConnectionAgeGrace: 5 * time.Second,  // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
-		Time:                  5 * time.Second,  // Ping the client if it is idle for 5 seconds to ensure the connection is still active
-		Timeout:               1 * time.Second,  // Wait 1 second for the ping ack before assuming the connection is dead
+		MaxConnectionIdle:     180 * time.Second, // If a client is idle for 15 seconds, send a GOAWAY
+		MaxConnectionAge:      90 * time.Second,  // If any connection is alive for more than 30 seconds, send a GOAWAY
+		MaxConnectionAgeGrace: 5 * time.Second,   // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
+		Time:                  5 * time.Second,   // Ping the client if it is idle for 5 seconds to ensure the connection is still active
+		Timeout:               3 * time.Second,   // Wait 1 second for the ping ack before assuming the connection is dead
 	}
 
 	opts := []grpc.ServerOption{
