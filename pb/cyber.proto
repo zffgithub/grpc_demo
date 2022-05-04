@@ -14,6 +14,7 @@ message HelloReply {
 
 message Request{
   int32 cyber_id=1;
+  string danmu = 2;
 }
 message Response{
   int32 no=1;

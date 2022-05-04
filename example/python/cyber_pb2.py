@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x63yber.proto\x12\x07service\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x1d\n\nHelloReply\x12\x0f\n\x07message\x18\x01 \x01(\t\"\x1b\n\x07Request\x12\x10\n\x08\x63yber_id\x18\x01 \x01(\x05\"#\n\x08Response\x12\n\n\x02no\x18\x01 \x01(\x05\x12\x0b\n\x03msg\x18\x02 \x01(\t2\xa0\x03\n\x0c\x43yberManager\x12\x38\n\x08SayHello\x12\x15.service.HelloRequest\x1a\x13.service.HelloReply\"\x00\x12\x31\n\x08\x45\x61syMode\x12\x10.service.Request\x1a\x11.service.Response\"\x00\x12\x37\n\x0c\x43lientStream\x12\x10.service.Request\x1a\x11.service.Response\"\x00(\x01\x12\x37\n\x0cServerStream\x12\x10.service.Request\x1a\x11.service.Response\"\x00\x30\x01\x12@\n\x13\x42idirectionalStream\x12\x10.service.Request\x1a\x11.service.Response\"\x00(\x01\x30\x01\x12\x36\n\rRemoteControl\x12\x10.service.Request\x1a\x11.service.Response\"\x00\x12\x37\n\x0c\x43yberControl\x12\x10.service.Request\x1a\x11.service.Response\"\x00\x30\x01\x42\rZ\x0b.;grpc_demob\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0b\x63yber.proto\x12\x07service\"\x1c\n\x0cHelloRequest\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x1d\n\nHelloReply\x12\x0f\n\x07message\x18\x01 \x01(\t\"*\n\x07Request\x12\x10\n\x08\x63yber_id\x18\x01 \x01(\x05\x12\r\n\x05\x64\x61nmu\x18\x02 \x01(\t\"#\n\x08Response\x12\n\n\x02no\x18\x01 \x01(\x05\x12\x0b\n\x03msg\x18\x02 \x01(\t2\xa0\x03\n\x0c\x43yberManager\x12\x38\n\x08SayHello\x12\x15.service.HelloRequest\x1a\x13.service.HelloReply\"\x00\x12\x31\n\x08\x45\x61syMode\x12\x10.service.Request\x1a\x11.service.Response\"\x00\x12\x37\n\x0c\x43lientStream\x12\x10.service.Request\x1a\x11.service.Response\"\x00(\x01\x12\x37\n\x0cServerStream\x12\x10.service.Request\x1a\x11.service.Response\"\x00\x30\x01\x12@\n\x13\x42idirectionalStream\x12\x10.service.Request\x1a\x11.service.Response\"\x00(\x01\x30\x01\x12\x36\n\rRemoteControl\x12\x10.service.Request\x1a\x11.service.Response\"\x00\x12\x37\n\x0c\x43yberControl\x12\x10.service.Request\x1a\x11.service.Response\"\x00\x30\x01\x42\rZ\x0b.;grpc_demob\x06proto3')
 
 
 
@@ -60,9 +60,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _HELLOREPLY._serialized_start=54
   _HELLOREPLY._serialized_end=83
   _REQUEST._serialized_start=85
-  _REQUEST._serialized_end=112
-  _RESPONSE._serialized_start=114
-  _RESPONSE._serialized_end=149
-  _CYBERMANAGER._serialized_start=152
-  _CYBERMANAGER._serialized_end=568
+  _REQUEST._serialized_end=127
+  _RESPONSE._serialized_start=129
+  _RESPONSE._serialized_end=164
+  _CYBERMANAGER._serialized_start=167
+  _CYBERMANAGER._serialized_end=583
 # @@protoc_insertion_point(module_scope)

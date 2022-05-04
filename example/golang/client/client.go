@@ -166,7 +166,7 @@ func main() {
 	// }
 	// fmt.Printf("调用成功: %s", res.Message)
 
-	req := &service.Request{CyberId: int32(2)}
+	req := &service.Request{CyberId: int32(2), Danmu: "None"}
 	// EasyModeFunc(c, req)
 	// ClientStreamFunc(c)
 	// ServerStreamFunc(c)

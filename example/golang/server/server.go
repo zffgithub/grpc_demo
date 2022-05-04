@@ -106,9 +106,9 @@ func init() {
 //简单模式
 func (s *Server) RemoteControl(ctx context.Context, in *service.Request) (*service.Response, error) {
 	fmt.Println("RemoteControl================简单模式================")
-	re := &service.Response{No: in.CyberId, Msg: "Receive one data"}
+	re := &service.Response{No: in.CyberId, Msg: in.Danmu}
 	topic := string(in.CyberId)
-	msg := fmt.Sprintf("RemoteControl Server send msg:%s", time.Now().Format("2006/01/02 15:04:05"))
+	msg := fmt.Sprintf("RemoteControl Server send time:%s, Danmu:%s", time.Now().Format("2006/01/02 15:04:05"), in.Danmu)
 	if err := q.Publish(topic, msg); err != nil {
 		fmt.Println(err)
 	}
