@@ -16,3 +16,4 @@
 
 example/python/.env
 example/python/__pycache__
+example/golang/server/server
