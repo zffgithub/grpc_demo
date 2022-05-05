@@ -74,22 +74,28 @@ func (s *Server) BidirectionalStream(stream service.CyberManager_BidirectionalSt
 	fmt.Println("###############双端模式###############")
 	i := int32(100000)
 	for {
-		//接收
-		in, err := stream.Recv()
-		if err == io.EOF {
-			fmt.Println("Recieve done.")
-			return nil
-		}
-		if err != nil {
-			grpclog.Fatal("Error in BidirectionalStream:", err)
-		}
-		fmt.Println(in, strconv.FormatInt(time.Now().UTC().UnixNano(), 10))
+		select {
+		case <-stream.Context().Done():
+			fmt.Println("Client disconnect by context done.")
+			return stream.Context().Err()
+		default:
+			//接收
+			in, err := stream.Recv()
+			if err == io.EOF {
+				fmt.Println("Recieve done.")
+				return nil
+			}
+			if err != nil {
+				fmt.Println("Error in BidirectionalStream:", err)
+			}
+			fmt.Println(in, strconv.FormatInt(time.Now().UTC().UnixNano(), 10))
 
-		//发送
-		i += 1
-		rp := &service.Response{No: i, Msg: "test"}
-		stream.Send(rp)
-		time.Sleep(1 * time.Second)
+			//发送
+			i += 1
+			rp := &service.Response{No: i, Msg: "test"}
+			stream.Send(rp)
+			time.Sleep(1 * time.Second)
+		}
 
 	}
 	// return nil
@@ -125,12 +131,18 @@ func (s *Server) CyberControl(in *service.Request, stream service.CyberManager_C
 		fmt.Println(err)
 	}
 	for {
-		msg := q.GetPayLoad(ch)
-		fmt.Println("CyberControl Receive queue data:", msg)
-		p := &service.Response{No: in.CyberId, Msg: fmt.Sprintf("CyberControl Server push data:%v", msg)}
-		send_err := stream.Send(p)
-		if send_err != nil {
-			fmt.Println("Send msg error:", send_err)
+		select {
+		case <-stream.Context().Done():
+			fmt.Println("Client disconnect by context done.")
+			return stream.Context().Err()
+		default:
+			msg := q.GetPayLoad(ch)
+			fmt.Println("CyberControl Receive queue data:", msg)
+			p := &service.Response{No: in.CyberId, Msg: fmt.Sprintf("CyberControl Server push data:%v", msg)}
+			send_err := stream.Send(p)
+			if send_err != nil {
+				fmt.Println("Send msg error:", send_err)
+			}
 		}
 	}
 	// var wg sync.WaitGroup
@@ -159,12 +171,12 @@ func main() {
 	}
 
 	kaep := keepalive.EnforcementPolicy{
-		MinTime:             60 * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
-		PermitWithoutStream: true,             // Allow pings even when there are no active streams
+		MinTime:             5 * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
+		PermitWithoutStream: true,            // Allow pings even when there are no active streams
 	}
 
 	kasp := keepalive.ServerParameters{
-		MaxConnectionIdle:     180 * time.Second,  // If a client is idle for 15 seconds, send a GOAWAY
+		MaxConnectionIdle:     15 * time.Second,   // If a client is idle for 15 seconds, send a GOAWAY
 		MaxConnectionAge:      3600 * time.Second, // If any connection is alive for more than 30 seconds, send a GOAWAY
 		MaxConnectionAgeGrace: 5 * time.Second,    // Allow 5 seconds for pending RPCs to complete before forcibly closing connections
 		Time:                  5 * time.Second,    // Ping the client if it is idle for 5 seconds to ensure the connection is still active

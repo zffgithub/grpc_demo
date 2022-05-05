@@ -43,7 +43,7 @@ func CyberControlFunc(client service.CyberManagerClient) {
 func main() {
 
 	kacp := keepalive.ClientParameters{
-		Time:                30 * time.Second, // send pings every 10 seconds if there is no activity
+		Time:                10 * time.Second, // send pings every 10 seconds if there is no activity
 		Timeout:             time.Second,      // wait 1 second for ping ack before considering the connection dead
 		PermitWithoutStream: true,             // send pings even without active streams
 	}
